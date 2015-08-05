@@ -1,0 +1,274 @@
+<!--
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Untitled Document</title>
+
+        <script src="js/lib/modernizr-v2.8.3.js"></script>
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.2.1/backbone-min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.modelbinder/1.1.0/Backbone.ModelBinder.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.marionette/2.4.2/backbone.marionette.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jasmine/2.3.4/jasmine.min.js"></script>
+    </head>
+    <body>
+
+
+
+        <script src="js/lib/jquery-2.1.4.min.js"></script>
+        <script src="js/lib/underscore.js"></script>
+        <script src="js/lib/backbone.js"></script>
+
+        <script type="text/javascript" src="js/todo.js"></script>
+        <script type="text/javascript" src="js/todoList.js"></script>
+        <script type="text/javascript" src="js/todoView.js"></script>
+        <script type="text/javascript" src="js/todoListView.js"></script>
+
+        <script src="js/main.js"></script>
+
+        <script type="text/html" id="item-template">
+            <label>
+                <input type="checkbox" {{#completed}}checked{{/completed}} id="toggle"></input>
+            {{title}}
+            </label>
+        <button id="delete">Delete</button>
+        </script>
+
+        <script type="text/html" id="stats-template">
+            <header id="addNewTodoItem">
+                <input type="text" autofocus id="newTodoItem" placeholder="What's the next task?"></input>
+            </header>
+        <ul id="todoList"></ul>
+        </script>
+
+<div class="container">
+    <h1>Document</h1>
+</div>
+
+</body>
+</html>
+-->
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Untitled Document</title>
+
+        <script src="js/lib/modernizr-v2.8.3.js"></script>
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.2.1/backbone-min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.modelbinder/1.1.0/Backbone.ModelBinder.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.marionette/2.4.2/backbone.marionette.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jasmine/2.3.4/jasmine.min.js"></script>
+    </head>
+    <body>
+
+        <script src="js/lib/jquery-2.1.4.min.js"></script>
+        <script src="js/lib/underscore.js"></script>
+        <script src="js/lib/backbone.js"></script>
+
+        <script type="text/template" id="item-template">
+            <div class="view">
+                <input class="toggle" type="checkbox" <%= done ? 'checked="checked"' : '' %> />
+                <label><%- title %></label>
+                <a class="destroy"></a>
+            </div>
+            <input class="edit" type="text" value="<%- title %>" />
+        </script>
+
+        <script type="text/template" id="stats-template">
+            <% if (done) { %>
+            <a id="clear-completed">Clear <%= done %> completed <%= done == 1 ? 'item' : 'items' %></a>
+            <% } %>
+            <div class="todo-count"><b><%= remaining %></b> <%= remaining == 1 ? 'item' : 'items' %> left</div>
+        </script>
+
+        <script>
+            $(function(){
+                //THIS IS THE TODO MODEL
+                var Todo = Backbone.Model.extend({
+                    defaults: function() {
+                        return {
+                            title: "empty todo...",
+                            order: Todos.nextOrder(),
+                            done: false
+                        };
+                    },
+
+                    toggle: function() {
+                        this.save({done: !this.get("done")});
+                    }
+                });
+
+                //THIS IS THE TODO LIST COLLECTION
+                //THIS IS WHERE ALL THE TODO MODELS ARE LOCATED
+                var TodoList = Backbone.Collection.extend({
+                    model: Todo,
+
+                    done: function() {
+                        return this.where({done: true});
+                    },
+
+                    remaining: function() {
+                        return this.without.apply(this. this.done());
+                    },
+
+                    nextOrder: function() {
+                        if (!this.length) return 1;
+                        return this.last().get('order') + 1;
+                    },
+
+                    comparator: 'order'
+                });
+
+                var Todos = new TodoList;
+
+
+                //THIS IS THE VIEW FOR A SINGLE MODEL
+                var TodoView = Backbone.View.extend({
+                    tagName: "li",
+
+                    template: _.template($('#item-template').html()),
+
+                    events: {
+                        "click .toggle" : "toggleDone",
+                        "dblclick .view" : "edit",
+                        "click a.destroy" : "clear",
+                        "keypress .edit" : "updateOnEnter",
+                        "blur .edit" : "close"
+                    },
+
+                    initialize: function() {
+                        this.listenTo(this.model, 'change', this.render);
+                        this.listenTo(this.model, 'destroy', this.remove);
+                    },
+
+                    render: function() {
+                        this.$el.html(this.template(this.model.toJSON()));
+                        this.$el.toggleClass('done', this.model.get('done'));
+                        this.input = this.$('.edit');
+                        return this;
+                    },
+
+                    toggleDone: function() {
+                        this.model.toggle();
+                    },
+
+                    edit: function() {
+                        this.$el.addClass("editing");
+                        this.input.focus();
+                    },
+
+                    close: function() {
+                        var value = this.input.val();
+                        if (!value) {
+                            this.clear();
+                        }
+                        else {
+                            this.model.save({title: value});
+                            this.$el.removeClass("editing");
+                        }
+                    },
+
+                    updateOnEnter: function(e) {
+                        if (e.keyCode == 13) this.close();
+                    },
+
+                    clear: function() {
+                        this.model.destroy();
+                    }
+                });
+
+                //THIS IS THE VIEW FOR THE TODO LIST COLLECTION
+                var AppView = Backbone.View.extend({
+                    el: $("#todoapp"),
+
+                    statsTemplate: _.template($('#stats-template').html()),
+
+                    events: {
+                        "keypress #new-todo": "creatOnEnter",
+                        "click #clear-completed": "clearCompleted",
+                        "click #toggle-all": "toggleAllComplete"
+                    },
+
+                    initialize: function() {
+                        this.input = this.$('#new-todo');
+                        this.allCheckbox = this.$("toggle-all")[0];
+
+                        this.listenTo(Todos, 'add', this.addOne);
+                        this.listenTo(Todos, 'reset', this.addAll);
+                        this.listenTo(Todos, 'all', this.render);
+
+                        this.footer = this.$('footer');
+                        this.main = $('#main');
+
+                        Todos.fetch();
+                    },
+
+                    render: function() {
+                        var done = Todos.done().length;
+                        var remaining = Todos.remaining().length;
+
+                        if (Todos.length) {
+                            this.main.show();
+                            this.footer.show();
+                            this.footer.html(this.statsTemplate({done: done, remaining: remaining}));
+                        }
+                        else {
+                            this.main.hide();
+                            this.footer.hide();
+                        }
+
+                        this.allCheckbox.checked = !remaining;
+                    },
+
+                    addOne: function(todo) {
+                        var view = new TodoView({model: todo});
+                        this.$("#todo-list").append(view.render().el);
+                    },
+
+                    addAll: function() {
+                        Todos.each(this.addOne, this);
+                    },
+
+                    createOnEnter: function(e) {
+                        if (e.keyCode !=13) return;
+                        if (!this.input.val()) return;
+
+                        Todos.create({title: this.input.val()});
+                        this.input.val('');
+                    },
+
+                    clearCompleted: function() {
+                        _.invoke(Todos.done(), 'destroy');
+                        return false;
+                    },
+
+                    toggleAllComplete: function() {
+                        var done = this.allCheckbox.cheecked;
+                        Todos.each(function (todo) { todo.save({'done': done}); });
+                    }
+
+                });
+            });
+
+            var App = new AppView;
+
+        </script>
+        <div class="container">
+            <h1>Document</h1>
+        </div>
+
+    </body>
+</html>
